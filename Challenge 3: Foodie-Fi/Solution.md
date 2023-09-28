@@ -140,3 +140,57 @@ from annual_cte a
 ```
 #### Result
 <img src=https://github.com/ththaaoo/8-week-SQL-challenge/assets/130723296/4d89d2f5-edba-4fb2-83d7-27c62b998b11 width="300">
+
+### 10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
+#### SQL query
+```sql
+with trial_cte as (
+	select 
+		customer_id,
+		start_date as trial_date
+	from subscriptions
+	where plan_id = 0),
+	
+annual_cte as (
+	select 
+		customer_id,
+		start_date as annual_date
+	from subscriptions
+	where plan_id = 3),
+
+date_group_cte as(
+	select 
+		a.customer_id,
+		(annual_date - trial_date) as switching_days,
+		case 
+			when (annual_date - trial_date)%30 = 0 then floor((annual_date - trial_date)/30) -1
+			else floor((annual_date - trial_date)/30) end as switching_days_group
+	from annual_cte a
+		join trial_cte t on a.customer_id = t.customer_id)
+
+select
+	concat(switching_days_group*30+1, '-',(switching_days_group+1)*30,' days') as periods,
+	count(distinct customer_id) as day_count
+from date_group_cte
+group by periods
+ORDER BY CAST(SPLIT_PART(concat(switching_days_group*30+1, '-',(switching_days_group+1)*30,' days'), '-', 1) AS INTEGER) ASC
+```
+#### Result
+<img src=https://github.com/ththaaoo/8-week-SQL-challenge/assets/130723296/7b3033b7-4250-420a-ade7-dd3203504b5f width="300">
+
+### 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
+#### SQL query
+```sql
+with cte as (
+	select
+		*,
+		lead(plan_id,1) over(partition by customer_id order by start_date) as next_plan
+	from subscriptions)
+	
+select 
+	count(distinct customer_id)
+from cte 
+where plan_id = 2 and next_plan = 1 
+```
+#### Result
+<img src=https://github.com/ththaaoo/8-week-SQL-challenge/assets/130723296/5bfaf5fe-612d-4bd2-8b9b-7b74b5dd65f7 width="200">
